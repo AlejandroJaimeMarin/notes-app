@@ -1,6 +1,8 @@
 import { StatusBar } from 'expo-status-bar';
-import React, {useState} from 'react';
-import { StyleSheet, Text, View, TextInput, FlatList, Modal, TouchableOpacity, Header} from 'react-native';
+import React, {useEffect, useState} from 'react';
+import Constants from "expo-constants";
+import * as SQLite from "expo-sqlite";
+import { StyleSheet, Text, View, TextInput, FlatList, Modal, TouchableOpacity} from 'react-native';
 
 
  /*Array de datos de ejemplo, para saber la estructura que va a tener nuestro modelo de datos*/
@@ -14,8 +16,22 @@ import { StyleSheet, Text, View, TextInput, FlatList, Modal, TouchableOpacity, H
         },
     ];
 
-
-
+    function openDatabase() {
+      if (Platform.OS === "web") {
+        return {
+          transaction: () => {
+            return {
+              executeSql: () => {},
+            };
+          },
+        };
+      }
+    
+      const db = SQLite.openDatabase("db.db");
+      return db;
+    }
+    
+    const db = openDatabase();
 
 
 export default function App() {
@@ -26,6 +42,19 @@ export default function App() {
   const [idEditar, setIdEditar] = useState(""); //Hook que recibe el id de la tarea seleccionada
   const [listadoTareas, setListadoTareas] = useState([]); // Hook con el array que recibe los datos del otro hook
 
+
+  useEffect(() => {
+    db.transaction(tx => {
+      tx.executeSql(
+        'CREATE TABLE IF NOT EXISTS items (id INTEGER, text TEXT)'
+      );
+      /*tx.executeSql("insert into items (id, text) values (?, ?)", ["Idprueba", "Textoprueba"]);
+      tx.executeSql("insert into items (id, text) values (?, ?)", ["Idprueba2", "Textoprueba2"]);*/
+      tx.executeSql("select * from items", [], (_, { rows }) =>
+          console.log(JSON.stringify(rows))
+        );
+    })
+  }, [])
 
  /* Maqueto un item del listado */
 const renderItem = ({item, index}) => {
@@ -47,7 +76,13 @@ const renderItem = ({item, index}) => {
 
   //Función que llama al hook y le pasa los datos
   function NuevaTarea (){
-
+    db.transaction(tx => {
+      
+      tx.executeSql("insert into items (id, text) values (?, ?)", [Date.now(), textoInput]);
+      tx.executeSql("select * from items", [], (_, { rows }) =>
+          console.log(JSON.stringify(rows))
+        );
+    })
     setListadoTareas(listadoTareas => [...listadoTareas,{"id": Date.now(), "nombreTarea": textoInput}]) //Añado un nuevo elemento al final del array
     setTextoInput(""); // Notifico al hook correspondiente para que le pase un valor vacío al textinput y lo limpie
     
@@ -55,9 +90,18 @@ const renderItem = ({item, index}) => {
 
   function EliminarTarea(item){
 
+    db.transaction(tx => {
+      
+      tx.executeSql('DELETE FROM items WHERE id = ? ', [item.id]);
+      tx.executeSql("select * from items", [], (_, { rows }) =>
+          console.log(JSON.stringify(rows))
+        );
+    })
+
+    
     console.log(item.id)
     console.log(item.nombreTarea)
-    var filtered = listadoTareas.filter(function(el) { return el.id != item.id; }); // Todo lo que no corresponda con el id de la que hay que borrar se manteniene
+    var filtered = listadoTareas.filter(function(el) { return el.id != item.id; }); // Todo lo que no corresponda con el id de la que hay que borrar se mantiene
     setListadoTareas(filtered);
       
   }
