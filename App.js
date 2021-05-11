@@ -6,7 +6,7 @@ import { StyleSheet, Text, View, TextInput, FlatList, Modal, TouchableOpacity} f
 
 
  /*Array de datos de ejemplo, para saber la estructura que va a tener nuestro modelo de datos*/
- const TAREAS = [{
+ /*const TAREAS = [{
       id: 'bd7acbea-c1b1-46c2-aed5-3ad53abb28ba',
       nombreTarea: 'Tarea 1'
       },
@@ -14,7 +14,7 @@ import { StyleSheet, Text, View, TextInput, FlatList, Modal, TouchableOpacity} f
         id: 'bd7acbea-c1b1-46c2-aed5-3ad53abb28b3',
         nombreTarea: 'Tarea 2'
         },
-    ];
+    ];*/
 
     function openDatabase() {
       if (Platform.OS === "web") {
@@ -42,16 +42,18 @@ export default function App() {
   const [idEditar, setIdEditar] = useState(""); //Hook que recibe el id de la tarea seleccionada
   const [listadoTareas, setListadoTareas] = useState([]); // Hook con el array que recibe los datos del otro hook
 
+  console.log(listadoTareas);
+
 
   useEffect(() => {
     db.transaction(tx => {
       tx.executeSql(
-        'CREATE TABLE IF NOT EXISTS items (id INTEGER, text TEXT)'
+        'CREATE TABLE IF NOT EXISTS items (id INTEGER, nombreTarea TEXT)'
       );
-      /*tx.executeSql("insert into items (id, text) values (?, ?)", ["Idprueba", "Textoprueba"]);
-      tx.executeSql("insert into items (id, text) values (?, ?)", ["Idprueba2", "Textoprueba2"]);*/
+      //tx.executeSql("insert into items (id, nombreTarea) values (?, ?)", ["Idprueba", "Textoprueba"]);
+      //tx.executeSql("insert into items (id, nombreTarea) values (?, ?)", ["Idprueba2", "Textoprueba2"]);
       tx.executeSql("select * from items", [], (_, { rows }) =>
-          console.log(JSON.stringify(rows))
+          setListadoTareas(rows._array)
         );
     })
   }, [])
@@ -78,12 +80,12 @@ const renderItem = ({item, index}) => {
   function NuevaTarea (){
     db.transaction(tx => {
       
-      tx.executeSql("insert into items (id, text) values (?, ?)", [Date.now(), textoInput]);
+      tx.executeSql("insert into items (id, nombreTarea) values (?, ?)", [Date.now(), textoInput]);
       tx.executeSql("select * from items", [], (_, { rows }) =>
-          console.log(JSON.stringify(rows))
+        setListadoTareas(rows._array)
         );
     })
-    setListadoTareas(listadoTareas => [...listadoTareas,{"id": Date.now(), "nombreTarea": textoInput}]) //Añado un nuevo elemento al final del array
+    //setListadoTareas(listadoTareas => [...listadoTareas,{"id": Date.now(), "nombreTarea": textoInput}]) //Añado un nuevo elemento al final del array
     setTextoInput(""); // Notifico al hook correspondiente para que le pase un valor vacío al textinput y lo limpie
     
   }
@@ -94,15 +96,15 @@ const renderItem = ({item, index}) => {
       
       tx.executeSql('DELETE FROM items WHERE id = ? ', [item.id]);
       tx.executeSql("select * from items", [], (_, { rows }) =>
-          console.log(JSON.stringify(rows))
+        setListadoTareas(rows._array) //Ojo que debes especificar que te devuelva el array solo y no todo el objeto del resulset
         );
     })
 
     
-    console.log(item.id)
+    /*console.log(item.id)
     console.log(item.nombreTarea)
     var filtered = listadoTareas.filter(function(el) { return el.id != item.id; }); // Todo lo que no corresponda con el id de la que hay que borrar se mantiene
-    setListadoTareas(filtered);
+    setListadoTareas(filtered);*/
       
   }
 
@@ -117,9 +119,9 @@ const renderItem = ({item, index}) => {
 
   function GuardarTarea(){
 
-      //Elemento nuevo qye capta lo que ha cambiado mi usuario
+      //Elemento nuevo que capta lo que ha cambiado mi usuario
                       
-      let tarea = {"id": idEditar, "nombreTarea": textoInputEditar};
+      /*let tarea = {"id": idEditar, "nombreTarea": textoInputEditar};
 
       //Creo una copia de mi listado
 
@@ -130,9 +132,17 @@ const renderItem = ({item, index}) => {
 
       //Cambio el elemento de mi array por el nuevo que tengo arriba
       listadoTareasCopia[targetIndex] = tarea;
-
+      
       //Se lo paso al hook de las tareas
-      setListadoTareas(listadoTareasCopia);
+      setListadoTareas(listadoTareasCopia);*/
+
+      db.transaction(tx => {
+      
+        tx.executeSql('UPDATE items SET nombreTarea = ? WHERE id = ? ', [textoInputEditar, idEditar]);
+        tx.executeSql("select * from items", [], (_, { rows }) =>
+          setListadoTareas(rows._array) //Ojo que debes especificar que te devuelva el array solo y no todo el objeto del resulset
+          );
+      })
       
       //Cierro el modal avisando al hook que lo controla
       setisModalVisible(false)
